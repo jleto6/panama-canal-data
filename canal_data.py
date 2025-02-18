@@ -52,3 +52,8 @@ def analyze_transit(ship_size: int, lock_type: str) -> dict:
         "percent_savings": percent_savings,
         "annual_water_displaced": water_displaced * 6 * transits_per_year
     }
+
+# Analyze a batched transit by combining multiple ship sizes into a single lock cycle
+def batch_analysis(ship_sizes: list[int], lock_type: str) -> dict:
+    total_tonnage = sum(ship_sizes)
+    return analyze_transit(total_tonnage, lock_type) 
