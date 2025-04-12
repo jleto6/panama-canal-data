@@ -1,100 +1,63 @@
-#!/usr/bin/env python3
+# Same logic as before, but removing ace_tools and using only native print statements and matplotlib.
+# This version uses monthly values from the slide chart and prints full summary of water savings.
 
-cost_per_gallon = 0.0002 # approximate dollar cost per gallon of water
-transits_per_year = 14000 # approximate amount of transits in the Panama canal per year
+import numpy as np
+import matplotlib.pyplot as plt
+import pandas as pd
 
-def main():
+# Monthly water loss estimates in millions of gallons (based on Slide chart)
+baseline_monthly_loss = np.array([
+    8600, 8300, 8700, 10800, 13000, 14900,
+    16800, 17900, 18500, 18800, 19200, 19500
+])  # millions
 
-    # Data for each lock
-    panamax_lock_data = {
-        "lock_name": "Panamax",  
-        "lock_volume": 50_000_000,  # Total lock volume in gallons
-        "water_lost" : 100 # Percentage of water lost based on water saving mechanisms
-    }
-    neopanamax_lock_data = {
-        "lock_name": "Neopanamax",  
-        "lock_volume": 38_000_000,  # Total lock volume in gallons
-        "water_lost" : 55 # Percentage of water lost based on water saving mechanisms
+goldilocks_monthly_loss = np.array([
+    5400, 5100, 5200, 7100, 9800, 11000,
+    12400, 13200, 13700, 13900, 14200, 14500
+])  # millions
 
-    }
+# Convert to billions for reporting
+baseline_monthly_loss_b = baseline_monthly_loss / 1000
+goldilocks_monthly_loss_b = goldilocks_monthly_loss / 1000
+monthly_savings_b = baseline_monthly_loss_b - goldilocks_monthly_loss_b
 
-    # Inputs
-    ship_size = int(input("Ship Tonnage: "))
-    lock_type = input("Lock Type (Panamax or Neopanamax): ").lower()
-        
-        
-    print("")
-    print("---------------------------------------------")
-    print("")
+# Totals
+total_baseline = baseline_monthly_loss_b.sum()
+total_goldilocks = goldilocks_monthly_loss_b.sum()
+total_saved = monthly_savings_b.sum()
+efficiency_gain = (total_saved / total_baseline) * 100
 
-    # If using Panamax lock
-    if (lock_type == "panamax"):
-        lock_calculation(panamax_lock_data, ship_size)
-    # If using Neopanamax lock
-    elif (lock_type == "neopanamax"):
-        lock_calculation(neopanamax_lock_data, ship_size)
-    # Compare all
-    elif (lock_type == "all"):
-        lock_calculation(panamax_lock_data, ship_size)
-        lock_calculation(neopanamax_lock_data, ship_size)
+# Print formatted summary
+print("\n---------------------------------------------")
+print("2024 Water Loss Summary (Real Monthly Data)")
+print("---------------------------------------------")
+print(f"Total Water Lost (Baseline):    {total_baseline:.2f} billion gallons")
+print(f"Total Water Lost (Goldilocks):  {total_goldilocks:.2f} billion gallons")
+print(f"Total Water Saved:              {total_saved:.2f} billion gallons")
+print(f"Efficiency Improvement:         {efficiency_gain:.1f}%")
 
+# Print breakdown table
+months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-def lock_calculation(lock_data, ship_size):
+print("\nMonthly Breakdown (in Billions of Gallons):")
+print(f"{'Month':<5} {'Baseline':>10} {'Goldilocks':>14} {'Saved':>10}")
+for i in range(12):
+    print(f"{months[i]:<5} {baseline_monthly_loss_b[i]:>10.2f} {goldilocks_monthly_loss_b[i]:>14.2f} {monthly_savings_b[i]:>10.2f}")
 
-    print("")
-    print(f"Data for {lock_data['lock_name']} lock with a {ship_size} ton ship:")
-    print("")
+# Visualization
+x = np.arange(len(months))
+width = 0.3
 
-    # Amount of water a ship will displace based on tonnage
-    water_displaced = ship_size * 240 #one ton displaces approximately 240 gallons of water
-    print(f"{format_number(water_displaced)} gallons of water displaced per lock")
+plt.figure(figsize=(12, 6))
+plt.bar(x - width, baseline_monthly_loss_b, width=width, label='Baseline Loss', color='gray')
+plt.bar(x, goldilocks_monthly_loss_b, width=width, label='Goldilocks Loss', color='green')
+plt.bar(x + width, monthly_savings_b, width=width, label='Saved', color='blue')
 
-    # Subtract ship displacement from lock volume to get water needed
-    water_needed = lock_data['lock_volume'] - water_displaced
-    print(f"{format_number(water_needed)} gallons of water needed per lock (since the ship displaces water, less additional water is required to fill the lock)")
-
-    # Calculate percentage of water saved based on ship displacement
-    percent_savings = (water_displaced / (lock_data['lock_volume'])) * 100
-
-    # Calculate water lost based on water needed and water saving mechanisms
-    water_lost = water_needed * (lock_data['water_lost'] / 100)
-    print(f"{format_number(water_lost)} gallons of water lost per lock (water not recycled)")
-
-    # Calculate cost based on water needed
-    cost_per_lock = water_needed * cost_per_gallon
-    print(f"{format_number(cost_per_lock)} dollars of water per lock")
-
-
-    # Calculations for a full transit
-    print("")
-    print(f"{format_number(water_displaced * 6)} gallons of water displaced for 1 full transit")
-    print(f"{format_number(water_needed * 6)} gallons of water needed for 1 full transit (since the ship displaces water, less additional water is required to fill the lock)")
-    print(f"{format_number((water_lost * 6))} gallons of water lost for 1 full transit (water not recycled)")
-    print(f"{percent_savings:.0f}% savings of water per lock because of water displaced (since the ship takes up space in the lock, it reduces the amount of additional water needed)")
-    print(f"{format_number(cost_per_lock * 6)} dollars of water for 1 full transit")
-    print("")
-
-    # Annual calculations
-    # for a {ship_size} ton ship in {lock_type} locks:
-    #annual_savings = (water_displaced * 6) * transits_per_year 
-    #print(f"{format_number(annual_savings)} gallons of water saved per year based on a {ship_size} ton ship")
-
-
-
-def format_number(n):
-
-    n = round(n)
-
-    if n > 1_000_000_000_000:
-        return (f"{n / 1_000_000_000_000} trillion")
-    elif n > 1_000_000_000:
-        return (f"{n / 1_000_000_000} billion")
-    elif n > 1_000_000:
-        return (f"{n / 1_000_000} million")
-    elif n > 1_000:
-        return (f"{n / 1_000} thousand")
-    else: 
-        return n
-
-if __name__ == "__main__":
-    main()
+plt.xticks(x, months)
+plt.ylabel("Water Loss (Billions of Gallons)")
+plt.title("Monthly Water Loss Comparison - Baseline vs Goldilocks")
+plt.legend()
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.show()
